@@ -20,13 +20,12 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, ReplaceOptions}
 import play.api.Configuration
 import play.api.libs.json.{Format, JsValue}
-import uk.gov.hmrc.crypto._
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive, SymmetricCryptoFactory}
 import uk.gov.hmrc.crypto.json.JsonEncryption
+import uk.gov.hmrc.mdc.Mdc.preservingMdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.toBson
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
-import org.mongodb.scala.SingleObservableFuture
 
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
@@ -63,7 +62,8 @@ class CacheRepository @Inject() (
       )
     ) {
 
-  implicit lazy val crypto: Encrypter with Decrypter = new ApplicationCrypto(configuration.underlying).JsonCrypto
+  implicit lazy val crypto: Encrypter with Decrypter =
+    SymmetricCryptoFactory.aesCryptoFromConfig("mongodb.encryption", configuration.underlying)
 
   def cache[T](id: String, value: T)(implicit formats: Format[T]) = {
 

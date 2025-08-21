@@ -62,7 +62,9 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
     val mockAuthConnector: AuthConnector = mock[AuthConnector]
     val auditHelper: AuditHelper = mock[AuditHelper]
 
-    when(mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(any(), any()))
+    when(
+      mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(using any(), any())
+    )
       .thenReturn(Future.successful(Enrolments(Set(Enrolment("test-scope")))))
 
     val scopes: Iterable[String] =
@@ -96,7 +98,11 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
 
           when(
             liveTaxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
@@ -109,10 +115,10 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
           status(result) shouldBe OK
 
           verify(workingTaxCreditsController.auditHelper, times(1))
-            .workingTaxCreditAuditApiResponse(any(), any(), any(), any(), any(), any())(any())
+            .workingTaxCreditAuditApiResponse(any(), any(), any(), any(), any(), any())(using any())
 
           verify(workingTaxCreditsController.auditHelper, times(1))
-            .auditAuthScopes(any(), any(), any())(any())
+            .auditAuthScopes(any(), any(), any())(using any())
         }
 
         "return 404 (not found) for an invalid matchId" in new Fixture {
@@ -121,7 +127,11 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
 
           when(
             liveTaxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.failed(new MatchNotFoundException)
@@ -142,12 +152,12 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
           )
 
           verify(workingTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
         "return 401 when the bearer token does not have enrolment test-scope" in new Fixture {
 
-          when(mockAuthConnector.authorise(any(), any())(any(), any()))
+          when(mockAuthConnector.authorise(any(), any())(using any(), any()))
             .thenReturn(Future.failed(InsufficientEnrolments()))
 
           val fakeRequest: FakeRequest[AnyContentAsEmpty.type] =
@@ -186,7 +196,11 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
 
           when(
             liveTaxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
@@ -204,7 +218,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
               |}""".stripMargin
           )
           verify(workingTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
         "throws an exception when CorrelationId Header is malformed" in new Fixture {
@@ -217,7 +231,11 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
 
           when(
             liveTaxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
@@ -235,7 +253,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
               |}""".stripMargin
           )
           verify(workingTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
       }
     }

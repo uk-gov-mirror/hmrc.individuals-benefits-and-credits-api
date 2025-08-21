@@ -18,6 +18,7 @@ package uk.gov.hmrc.individualsbenefitsandcreditsapi.cache
 
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, ReplaceOptions}
+import org.mongodb.scala.result.UpdateResult
 import play.api.Configuration
 import play.api.libs.json.{Format, JsValue}
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive, SymmetricCryptoFactory}
@@ -62,10 +63,10 @@ class CacheRepository @Inject() (
       )
     ) {
 
-  implicit lazy val crypto: Encrypter with Decrypter =
+  implicit lazy val crypto: Encrypter & Decrypter =
     SymmetricCryptoFactory.aesCryptoFromConfig("mongodb.encryption", configuration.underlying)
 
-  def cache[T](id: String, value: T)(implicit formats: Format[T]) = {
+  def cache[T](id: String, value: T)(implicit formats: Format[T]): Future[UpdateResult] = {
 
     val jsonEncryptor = JsonEncryption.sensitiveEncrypter[T, SensitiveT[T]]
     val encryptedValue: JsValue = jsonEncryptor.writes(SensitiveT(value))
@@ -109,19 +110,19 @@ class CacheRepository @Inject() (
 @Singleton
 class CacheRepositoryConfiguration @Inject() (configuration: Configuration) {
 
-  lazy val cacheEnabled = configuration
+  lazy val cacheEnabled: Boolean = configuration
     .getOptional[Boolean](
       "cache.enabled"
     )
     .getOrElse(true)
 
-  lazy val cacheTtl = configuration
+  lazy val cacheTtl: Int = configuration
     .getOptional[Int](
       "cache.ttlInSeconds"
     )
     .getOrElse(60 * 15)
 
-  lazy val collName = configuration
+  lazy val collName: String = configuration
     .getOptional[String](
       "cache.collName"
     )

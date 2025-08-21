@@ -69,7 +69,7 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
       auditHelper.auditAuthScopes(matchId, scopes, request)
 
       verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("AuthScopesAuditEvent"), captor.capture())(any(), any(), any())
+        .sendExplicitAudit(eqTo("AuthScopesAuditEvent"), captor.capture())(using any(), any(), any())
 
       val capturedEvent = captor.getValue.asInstanceOf[ScopesAuditEventModel]
       capturedEvent.apiVersion shouldEqual "1.0"
@@ -92,7 +92,7 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
         .childTaxCreditAuditApiResponse(correlationId, matchId, scopes, request, endpoint, childTaxCreditResponse)
 
       verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("ApiResponseEvent"), captor.capture())(any(), any(), any())
+        .sendExplicitAudit(eqTo("ApiResponseEvent"), captor.capture())(using any(), any(), any())
 
       val capturedEvent =
         captor.getValue.asInstanceOf[ChildTaxApiResponseEventModel]
@@ -117,7 +117,7 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
         .workingTaxCreditAuditApiResponse(correlationId, matchId, scopes, request, endpoint, workingTaxCreditResponse)
 
       verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("ApiResponseEvent"), captor.capture())(any(), any(), any())
+        .sendExplicitAudit(eqTo("ApiResponseEvent"), captor.capture())(using any(), any(), any())
 
       val capturedEvent =
         captor.getValue.asInstanceOf[WorkingTaxApiResponseEventModel]
@@ -142,7 +142,11 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
 
       auditHelper.auditApiFailure(Some(correlationId), matchId, request, "/test", msg)
 
-      verify(auditConnector, times(1)).sendExplicitAudit(eqTo("ApiFailureEvent"), captor.capture())(any(), any(), any())
+      verify(auditConnector, times(1)).sendExplicitAudit(eqTo("ApiFailureEvent"), captor.capture())(using
+        any(),
+        any(),
+        any()
+      )
 
       val capturedEvent =
         captor.getValue.asInstanceOf[ApiFailureResponseEventModel]
@@ -163,7 +167,7 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
       auditHelper.auditIfApiResponse(correlationId, matchId, request, ifUrl, ifResponse)
 
       verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("IntegrationFrameworkApiResponseEvent"), captor.capture())(any(), any(), any())
+        .sendExplicitAudit(eqTo("IntegrationFrameworkApiResponseEvent"), captor.capture())(using any(), any(), any())
 
       val capturedEvent = captor.getValue.asInstanceOf[IfApiResponseEventModel]
       capturedEvent.matchId shouldEqual matchId
@@ -186,7 +190,7 @@ class AuditHelperSpec extends UnitSpec with MockitoSugar {
       auditHelper.auditIfApiFailure(correlationId, matchId, request, ifUrl, msg)
 
       verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("IntegrationFrameworkApiFailureEvent"), captor.capture())(any(), any(), any())
+        .sendExplicitAudit(eqTo("IntegrationFrameworkApiFailureEvent"), captor.capture())(using any(), any(), any())
 
       val capturedEvent =
         captor.getValue.asInstanceOf[ApiFailureResponseEventModel]

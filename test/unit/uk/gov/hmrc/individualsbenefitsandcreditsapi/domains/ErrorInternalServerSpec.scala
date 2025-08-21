@@ -16,7 +16,6 @@
 
 package unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.domains
 
-import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.libs.json.{Json, Writes}

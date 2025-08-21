@@ -41,7 +41,7 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
 
   trait Setup {
 
-    val cacheService: CacheService = new CacheService(null, null)(null) {
+    val cacheService: CacheService = new CacheService(null, null)(using null) {
       override def get[T: Format](cacheId: CacheIdBase, functionToCache: => Future[T]): Future[T] =
         functionToCache
     }
@@ -74,7 +74,7 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
     when(scopeService.getValidFieldsForCacheKey(any(), any()))
       .thenReturn("test")
     when(scopesHelper.getQueryStringFor(any(), any())).thenReturn("(ABC)")
-    when(matchingConnector.resolve(eqTo(testMatchId))(any()))
+    when(matchingConnector.resolve(eqTo(testMatchId))(using any()))
       .thenReturn(Future.successful(MatchedCitizen(testMatchId, nino)))
 
   }
@@ -82,11 +82,11 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
   "Live Tax Credits Service" should {
 
     "return empty list of working tax credits when no records exists for the given matchId" in new Setup {
-      when(ifConnector.fetchTaxCredits(any(), any(), any(), any())(any(), any(), any()))
+      when(ifConnector.fetchTaxCredits(any(), any(), any(), any())(using any(), any(), any()))
         .thenReturn(Future.successful(createEmptyIfApplications.applications))
       val response: Seq[WtcApplicationModel] = await(
         taxCreditsService
-          .getWorkingTaxCredits(testMatchId, testInterval, Seq("testScope"))(hc, FakeRequest(), ec)
+          .getWorkingTaxCredits(testMatchId, testInterval, Seq("testScope"))(using hc, FakeRequest(), ec)
       )
       response.isEmpty shouldBe true
     }
@@ -94,22 +94,22 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
     "return list of working tax credits when records exists for the given matchId" in new Setup {
       when(
         ifConnector
-          .fetchTaxCredits(eqTo(nino), eqTo(testInterval), any(), eqTo(testMatchId.toString))(any(), any(), any())
+          .fetchTaxCredits(eqTo(nino), eqTo(testInterval), any(), eqTo(testMatchId.toString))(using any(), any(), any())
       )
         .thenReturn(Future.successful(createValidIfApplicationsMultiple.applications))
       val response: Seq[WtcApplicationModel] = await(
         taxCreditsService
-          .getWorkingTaxCredits(testMatchId, testInterval, Seq("testScope"))(hc, FakeRequest(), ec)
+          .getWorkingTaxCredits(testMatchId, testInterval, Seq("testScope"))(using hc, FakeRequest(), ec)
       )
       response.isEmpty shouldBe false
     }
 
     "return empty list of child tax credits when no records exists for the given matchId" in new Setup {
-      when(ifConnector.fetchTaxCredits(any(), any(), any(), any())(any(), any(), any()))
+      when(ifConnector.fetchTaxCredits(any(), any(), any(), any())(using any(), any(), any()))
         .thenReturn(Future.successful(createEmptyIfApplications.applications))
       val response: Seq[CtcApplicationModel] = await(
         taxCreditsService
-          .getChildTaxCredits(testMatchId, testInterval, Seq("testScope"))(hc, FakeRequest(), ec)
+          .getChildTaxCredits(testMatchId, testInterval, Seq("testScope"))(using hc, FakeRequest(), ec)
       )
       response.isEmpty shouldBe true
     }
@@ -117,12 +117,12 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
     "return list of child tax credits when records exists for the given matchId" in new Setup {
       when(
         ifConnector
-          .fetchTaxCredits(eqTo(nino), eqTo(testInterval), any(), eqTo(testMatchId.toString))(any(), any(), any())
+          .fetchTaxCredits(eqTo(nino), eqTo(testInterval), any(), eqTo(testMatchId.toString))(using any(), any(), any())
       )
         .thenReturn(Future.successful(createValidIfApplicationsMultiple.applications))
       val response: Seq[CtcApplicationModel] = await(
         taxCreditsService
-          .getChildTaxCredits(testMatchId, testInterval, Seq("testScope"))(hc, FakeRequest(), ec)
+          .getChildTaxCredits(testMatchId, testInterval, Seq("testScope"))(using hc, FakeRequest(), ec)
       )
       response.isEmpty shouldBe false
     }

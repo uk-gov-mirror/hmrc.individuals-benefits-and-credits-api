@@ -47,7 +47,7 @@ object IfStub extends MockHost(22004) {
         )
     )
 
-  def enforceRateLimit(nino: String, fromDate: String, toDate: String): Unit =
+  def enforceRateLimit(fromDate: String, toDate: String): Unit =
     mock.register(
       get(urlPathEqualTo(s"/individuals/tax-credits/"))
         .withQueryParam("startDate", equalTo(fromDate))

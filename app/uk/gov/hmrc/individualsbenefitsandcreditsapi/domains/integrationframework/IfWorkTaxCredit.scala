@@ -25,11 +25,11 @@ object IfWorkTaxCredit extends PatternsAndValidators {
 
   implicit val workTaxCreditFormat: Format[IfWorkTaxCredit] = Format(
     (
-      (JsPath \ "amount").readNullable[Double](paymentAmountValidator) and
+      (JsPath \ "amount").readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "entitlementYTD")
-          .readNullable[Double](paymentAmountValidator) and
-        (JsPath \ "paidYTD").readNullable[Double](paymentAmountValidator)
-    )(IfWorkTaxCredit.apply _),
+          .readNullable[Double](using paymentAmountValidator) and
+        (JsPath \ "paidYTD").readNullable[Double](using paymentAmountValidator)
+    )(IfWorkTaxCredit.apply),
     Json.writes[IfWorkTaxCredit]
   )
 }

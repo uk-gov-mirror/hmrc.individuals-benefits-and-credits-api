@@ -62,7 +62,9 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
     val mockAuthConnector: AuthConnector = mock[AuthConnector]
     val auditHelper: AuditHelper = mock[AuditHelper]
 
-    when(mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(any(), any()))
+    when(
+      mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(using any(), any())
+    )
       .thenReturn(Future.successful(Enrolments(Set(Enrolment("test-scope")))))
 
     val scopes: Iterable[String] =
@@ -93,7 +95,11 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
 
           when(
             taxCreditsService
-              .getChildTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getChildTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidCtcApplication(), createValidCtcApplication()))
@@ -106,10 +112,10 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
           status(result) shouldBe OK
 
           verify(childTaxCreditsController.auditHelper, times(1))
-            .childTaxCreditAuditApiResponse(any(), any(), any(), any(), any(), any())(any())
+            .childTaxCreditAuditApiResponse(any(), any(), any(), any(), any(), any())(using any())
 
           verify(childTaxCreditsController.auditHelper, times(1))
-            .auditAuthScopes(any(), any(), any())(any())
+            .auditAuthScopes(any(), any(), any())(using any())
         }
 
         "return 404 (not found) for an invalid matchId" in new Fixture {
@@ -118,7 +124,11 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
 
           when(
             taxCreditsService
-              .getChildTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getChildTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.failed(new MatchNotFoundException)
@@ -139,12 +149,12 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
           )
 
           verify(childTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
         "return 401 when the bearer token does not have enrolment test-scope" in new Fixture {
 
-          when(mockAuthConnector.authorise(any(), any())(any(), any()))
+          when(mockAuthConnector.authorise(any(), any())(using any(), any()))
             .thenReturn(Future.failed(InsufficientEnrolments()))
 
           val fakeRequest: FakeRequest[AnyContentAsEmpty.type] =
@@ -184,7 +194,11 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
 
           when(
             taxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
@@ -202,7 +216,7 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
               |}""".stripMargin
           )
           verify(childTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
         "throws an exception when CorrelationId Header is malformed" in new Fixture {
@@ -215,7 +229,11 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
 
           when(
             taxCreditsService
-              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(any(), any(), any())
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Set("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
           )
             .thenReturn(
               Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
@@ -233,7 +251,7 @@ class ChildTaxCreditControllerSpec extends SpecBase with MockitoSugar with Domai
               |}""".stripMargin
           )
           verify(childTaxCreditsController.auditHelper, times(1))
-            .auditApiFailure(any(), any(), any(), any(), any())(any())
+            .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
       }
     }

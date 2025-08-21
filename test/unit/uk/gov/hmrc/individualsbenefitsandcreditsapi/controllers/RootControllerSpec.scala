@@ -62,7 +62,9 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
     val testNino: Nino = Nino("AB123456C")
 
-    when(mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(any(), any()))
+    when(
+      mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(using any(), any())
+    )
       .thenReturn(Future.successful(Enrolments(Set(Enrolment("test-scope")))))
 
     val rootController =
@@ -82,7 +84,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
       Mockito.reset(rootController.auditHelper)
 
-      when(taxCreditsService.resolve(eqTo(testMatchId))(any[HeaderCarrier]))
+      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier]))
         .thenReturn(Future.failed(new MatchNotFoundException))
 
       val eventualResult: Future[Result] =
@@ -94,12 +96,12 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
         "message" -> "The resource can not be found"
       )
 
-      verify(rootController.auditHelper, times(1)).auditApiFailure(any(), any(), any(), any(), any())(any())
+      verify(rootController.auditHelper, times(1)).auditApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
     "return a 200 (ok) when a match id matches tdata" in new Fixture {
 
-      when(taxCreditsService.resolve(eqTo(testMatchId))(any[HeaderCarrier]))
+      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier]))
         .thenReturn(Future.successful(MatchedCitizen(testMatchId, testNino)))
 
       val eventualResult: Future[Result] =
@@ -125,7 +127,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
     "fail with status 401 when the bearer token does not have enrolment test-scope" in new Fixture {
 
-      when(mockAuthConnector.authorise(any(), any())(any(), any()))
+      when(mockAuthConnector.authorise(any(), any())(using any(), any()))
         .thenReturn(Future.failed(InsufficientEnrolments()))
 
       val result: Future[Result] = rootController.root(testMatchId)(FakeRequest().withHeaders(correlationIdHeader))

@@ -40,7 +40,7 @@ class IfConnector @Inject() (servicesConfig: ServicesConfig, http: HttpClientV2,
   private val integrationFrameworkEnvironment =
     servicesConfig.getString("microservice.services.integration-framework.environment")
 
-  val serviceUrl = servicesConfig.baseUrl("integration-framework")
+  val serviceUrl: String = servicesConfig.baseUrl("integration-framework")
 
   def fetchTaxCredits(nino: Nino, interval: Interval, filter: Option[String], matchId: String)(implicit
     hc: HeaderCarrier,
@@ -73,7 +73,7 @@ class IfConnector @Inject() (servicesConfig: ServicesConfig, http: HttpClientV2,
     ec: ExecutionContext
   ) =
     recover[IfApplication](
-      http.get(url"$url").transform(_.addHttpHeaders(setHeaders(request): _*)).execute[IfApplications] map { response =>
+      http.get(url"$url").transform(_.addHttpHeaders(setHeaders(request)*)).execute[IfApplications] map { response =>
         auditHelper.auditIfApiResponse(extractCorrelationId(request), matchId, request, url, response)
         response.applications
       },

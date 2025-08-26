@@ -36,19 +36,19 @@ object IfAward extends PatternsAndValidators {
   implicit val awardsFormat: Format[IfAward] = Format(
     (
       (JsPath \ "payProfCalcDate")
-        .readNullable[String](pattern(datePattern, "invalid date")) and
+        .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "startDate")
-          .readNullable[String](pattern(datePattern, "invalid date")) and
+          .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "endDate")
-          .readNullable[String](pattern(datePattern, "invalid date")) and
+          .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "totalEntitlement")
-          .readNullable[Double](paymentAmountValidator) and
+          .readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "workingTaxCredit").readNullable[IfWorkTaxCredit] and
         (JsPath \ "childTaxCredit").readNullable[IfChildTaxCredit] and
         (JsPath \ "grossTaxYearAmount")
-          .readNullable[Double](paymentAmountValidator) and
+          .readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "payments").readNullable[Seq[IfPayment]]
-    )(IfAward.apply _),
+    )(IfAward.apply),
     Json.writes[IfAward]
   )
 }

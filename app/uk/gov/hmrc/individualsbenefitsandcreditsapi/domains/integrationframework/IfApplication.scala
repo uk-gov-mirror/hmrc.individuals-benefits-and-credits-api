@@ -32,15 +32,15 @@ object IfApplication extends PatternsAndValidators {
 
   implicit val applicationFormat: Format[IfApplication] = Format(
     (
-      (JsPath \ "id").readNullable[Double](applicationIdValidator) and
+      (JsPath \ "id").readNullable[Double](using applicationIdValidator) and
         (JsPath \ "ceasedDate")
-          .readNullable[String](pattern(datePattern, "invalid date")) and
+          .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "entStartDate")
-          .readNullable[String](pattern(datePattern, "invalid date")) and
+          .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "entEndDate")
-          .readNullable[String](pattern(datePattern, "invalid date")) and
+          .readNullable[String](using pattern(datePattern, "invalid date")) and
         (JsPath \ "awards").readNullable[Seq[IfAward]]
-    )(IfApplication.apply _),
+    )(IfApplication.apply),
     Json.writes[IfApplication]
   )
 }

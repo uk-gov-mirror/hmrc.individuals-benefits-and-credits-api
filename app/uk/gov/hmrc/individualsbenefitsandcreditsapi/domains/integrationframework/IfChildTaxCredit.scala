@@ -33,16 +33,16 @@ object IfChildTaxCredit extends PatternsAndValidators {
   implicit val childTaxCreditFormat: Format[IfChildTaxCredit] = Format(
     (
       (JsPath \ "childCareAmount")
-        .readNullable[Double](paymentAmountValidator) and
+        .readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "ctcChildAmount")
-          .readNullable[Double](paymentAmountValidator) and
+          .readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "familyAmount")
-          .readNullable[Double](paymentAmountValidator) and
-        (JsPath \ "babyAmount").readNullable[Double](paymentAmountValidator) and
+          .readNullable[Double](using paymentAmountValidator) and
+        (JsPath \ "babyAmount").readNullable[Double](using paymentAmountValidator) and
         (JsPath \ "entitlementYTD")
-          .readNullable[Double](paymentAmountValidator) and
-        (JsPath \ "paidYTD").readNullable[Double](paymentAmountValidator)
-    )(IfChildTaxCredit.apply _),
+          .readNullable[Double](using paymentAmountValidator) and
+        (JsPath \ "paidYTD").readNullable[Double](using paymentAmountValidator)
+    )(IfChildTaxCredit.apply),
     Json.writes[IfChildTaxCredit]
   )
 }

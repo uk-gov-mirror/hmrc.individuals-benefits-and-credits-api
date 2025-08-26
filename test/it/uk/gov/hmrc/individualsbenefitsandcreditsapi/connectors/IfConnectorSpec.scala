@@ -17,7 +17,7 @@
 package it.uk.gov.hmrc.individualsbenefitsandcreditsapi.connectors
 
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -34,6 +34,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, InternalServerException, NotFoundException}
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.audit.AuditHelper
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.connectors.IfConnector
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.integrationframework.{IfApplication, IfApplications}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.SpecBase
 
@@ -50,7 +51,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
   def externalServices: Seq[String] = Seq.empty
 
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
-    .bindings(bindModules: _*)
+    .bindings(bindModules*)
     .configure(
       "microservice.services.integration-framework.host"                -> "127.0.0.1",
       "microservice.services.integration-framework.port"                -> "11122",
@@ -83,7 +84,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
   override def afterEach(): Unit =
     wireMockServer.stop()
 
-  val applicationsData = createValidIfApplications
+  val applicationsData: IfApplications = createValidIfApplications
   val idType = "nino"
   val idValue = "NA000799C"
 
@@ -107,7 +108,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
 
       intercept[InternalServerException] {
         await(
-          underTest.fetchTaxCredits(nino, interval, None, matchId)(
+          underTest.fetchTaxCredits(nino, interval, None, matchId)(using
             hc,
             FakeRequest().withHeaders(sampleCorrelationIdHeader),
             ec
@@ -115,7 +116,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
         )
       }
 
-      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(any())
+      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
     "Fail when IF returns a bad request" in new Setup {
@@ -131,7 +132,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
 
       intercept[InternalServerException] {
         await(
-          underTest.fetchTaxCredits(nino, interval, None, matchId)(
+          underTest.fetchTaxCredits(nino, interval, None, matchId)(using
             hc,
             FakeRequest().withHeaders(sampleCorrelationIdHeader),
             ec
@@ -139,7 +140,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
         )
       }
 
-      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(any())
+      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
     "return an empty dataset for NO_DATA_FOUND" in new Setup {
@@ -153,14 +154,18 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
           .willReturn(aResponse().withStatus(404).withBody("NO_DATA_FOUND"))
       )
 
-      val result = await(
+      val result: Seq[IfApplication] = await(
         underTest
-          .fetchTaxCredits(nino, interval, None, matchId)(hc, FakeRequest().withHeaders(sampleCorrelationIdHeader), ec)
+          .fetchTaxCredits(nino, interval, None, matchId)(using
+            hc,
+            FakeRequest().withHeaders(sampleCorrelationIdHeader),
+            ec
+          )
       )
 
       result shouldBe List()
 
-      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(any())
+      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
     "Fail when IF returns a NOT_FOUND" in new Setup {
@@ -176,7 +181,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
 
       intercept[NotFoundException] {
         await(
-          underTest.fetchTaxCredits(nino, interval, None, matchId)(
+          underTest.fetchTaxCredits(nino, interval, None, matchId)(using
             hc,
             FakeRequest().withHeaders(sampleCorrelationIdHeader),
             ec
@@ -184,7 +189,7 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
         )
       }
 
-      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(any())
+      verify(underTest.auditHelper, times(1)).auditIfApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
     "for standard response" in new Setup {
@@ -205,16 +210,16 @@ class IfConnectorSpec extends SpecBase with BeforeAndAfterEach with TestHelpers 
           )
       )
 
-      val result =
+      val result: Seq[IfApplication] =
         await(
-          underTest.fetchTaxCredits(nino, interval, None, matchId)(
+          underTest.fetchTaxCredits(nino, interval, None, matchId)(using
             hc,
             FakeRequest().withHeaders(sampleCorrelationIdHeader),
             ec
           )
         )
 
-      verify(underTest.auditHelper, times(1)).auditIfApiResponse(any(), any(), any(), any(), any())(any())
+      verify(underTest.auditHelper, times(1)).auditIfApiResponse(any(), any(), any(), any(), any())(using any())
 
       result shouldBe applicationsData.applications
 

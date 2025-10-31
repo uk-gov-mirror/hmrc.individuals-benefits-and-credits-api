@@ -16,12 +16,17 @@
 
 package uk.gov.hmrc.individualsbenefitsandcreditsapi.cache
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.*
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.MongoDateFormats.localDateTimeFormat
 
 import java.time.LocalDateTime
 
 case class ModifiedDetails(createdAt: LocalDateTime, lastUpdated: LocalDateTime)
 
 object ModifiedDetails {
-  implicit val format: Format[ModifiedDetails] = Json.format
+  implicit val format: Format[ModifiedDetails] = (
+    (__ \ "createdAt").format(using localDateTimeFormat) and
+      (__ \ "lastUpdated").format(using localDateTimeFormat)
+  )(ModifiedDetails.apply, udt => (udt.createdAt, udt.lastUpdated))
 }

@@ -1,3 +1,3 @@
-GET        /working-tax-credit      uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.WorkingTaxCreditController.workingTaxCredit(matchId: java.util.UUID, interval: uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.Interval)
-GET        /child-tax-credit        uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.ChildTaxCreditController.childTaxCredit(matchId: java.util.UUID, interval: uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.Interval)
-GET        /                        uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.RootController.root(matchId: java.util.UUID)
+GET        /working-tax-credit      uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.WorkingTaxCreditController.workingTaxCredit(matchId: java.util.UUID, interval: uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.Interval)
+GET        /child-tax-credit        uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.ChildTaxCreditController.childTaxCredit(matchId: java.util.UUID, interval: uk.gov.hmrc.individualsbenefitsandcreditsapi.utils.Interval)
+GET        /                        uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.RootController.root(matchId: java.util.UUID)

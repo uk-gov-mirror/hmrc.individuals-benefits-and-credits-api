@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Format
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import testUtils.TestHelpers
 import uk.gov.hmrc.domain.Nino
@@ -70,11 +71,12 @@ class LiveTaxCreditsServiceSpec extends UnitSpec with MockitoSugar with TestHelp
 
     implicit val ec: ExecutionContextExecutor = ExecutionContext.global
     implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val rd: RequestHeader = FakeRequest()
 
     when(scopeService.getValidFieldsForCacheKey(any(), any()))
       .thenReturn("test")
     when(scopesHelper.getQueryStringFor(any(), any())).thenReturn("(ABC)")
-    when(matchingConnector.resolve(eqTo(testMatchId))(using any()))
+    when(matchingConnector.resolve(eqTo(testMatchId))(using any(), any()))
       .thenReturn(Future.successful(MatchedCitizen(testMatchId, nino)))
 
   }

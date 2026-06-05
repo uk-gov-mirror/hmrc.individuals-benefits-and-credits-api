@@ -17,20 +17,20 @@
 package unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers
 
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo, refEq}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo, refEq}
 import org.mockito.Mockito
 import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
-import play.api.mvc.Result
+import play.api.mvc.{RequestHeader, Result}
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.{AuthConnector, Enrolment, Enrolments, InsufficientEnrolments}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.audit.AuditHelper
-import uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.RootController
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.RootController
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.{MatchNotFoundException, MatchedCitizen}
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.services.{ScopesHelper, ScopesService, TaxCreditsService}
 import unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.config.ScopesConfigHelper
@@ -84,7 +84,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
       Mockito.reset(rootController.auditHelper)
 
-      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier]))
+      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier], any[RequestHeader]))
         .thenReturn(Future.failed(new MatchNotFoundException))
 
       val eventualResult: Future[Result] =
@@ -101,7 +101,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
     "return a 200 (ok) when a match id matches tdata" in new Fixture {
 
-      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier]))
+      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier], any[RequestHeader]))
         .thenReturn(Future.successful(MatchedCitizen(testMatchId, testNino)))
 
       val eventualResult: Future[Result] =

@@ -62,7 +62,7 @@ class TaxCreditsService @Inject() (
       .map(applications => applications.map(WtcApplication.create))
   }
 
-  def resolve(matchId: UUID)(implicit hc: HeaderCarrier): Future[MatchedCitizen] =
+  def resolve(matchId: UUID)(implicit hc: HeaderCarrier, request: RequestHeader): Future[MatchedCitizen] =
     individualsMatchingApiConnector.resolve(matchId)
 
   def getChildTaxCredits(matchId: UUID, interval: Interval, scopes: Iterable[String])(implicit

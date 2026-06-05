@@ -17,10 +17,13 @@
 package unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.connectors
 
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import org.scalatest.BeforeAndAfterEach
-import play.api.test.Helpers._
+import org.scalatest.matchers.must.Matchers.mustBe
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
+import play.api.test.Helpers.*
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -39,6 +42,7 @@ class IndividualsMatchingApiConnectorSpec extends SpecBase with BeforeAndAfterEa
 
   trait Fixture {
     implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val rd: RequestHeader = FakeRequest()
 
     val individualsMatchingApiConnector: IndividualsMatchingApiConnector =
       new IndividualsMatchingApiConnector(servicesConfig, fakeApplication().injector.instanceOf[HttpClientV2]) {
@@ -90,6 +94,22 @@ class IndividualsMatchingApiConnectorSpec extends SpecBase with BeforeAndAfterEa
       await(individualsMatchingApiConnector.resolve(matchId)) shouldBe MatchedCitizen(matchId, Nino("AB123456C"))
     }
 
+    "setHeaders return header when CorrelationId is present" in new Fixture {
+
+      val request = FakeRequest().withHeaders("CorrelationId" -> "188e9400-b636-4a3b-80ba-230a8c72b92a")
+
+      val result: Seq[(String, String)] = individualsMatchingApiConnector.setHeaders(request)
+
+      result mustBe Seq("CorrelationId" -> "188e9400-b636-4a3b-80ba-230a8c72b92a")
+    }
+
+    "setHeaders return empty Seq when CorrelationId is missing" in new Fixture {
+      val request = FakeRequest()
+
+      val result: Seq[(String, String)] = individualsMatchingApiConnector.setHeaders(request)
+
+      result mustBe Seq.empty
+    }
   }
 
   override def afterEach(): Unit =

@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.individualsbenefitsandcreditsapi.connectors
 
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http._
-import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.JsonFormatters._
+import play.api.mvc.RequestHeader
+import uk.gov.hmrc.http.HttpReads.Implicits.*
+import uk.gov.hmrc.http.*
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.JsonFormatters.*
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.{MatchNotFoundException, MatchedCitizen}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -34,10 +35,19 @@ class IndividualsMatchingApiConnector @Inject() (servicesConfig: ServicesConfig,
   private[connectors] val serviceUrl =
     servicesConfig.baseUrl("individuals-matching-api")
 
-  def resolve(matchId: UUID)(implicit hc: HeaderCarrier): Future[MatchedCitizen] =
-    http.get(url"$serviceUrl/match-record/$matchId").execute[MatchedCitizen] recover {
-      case UpstreamErrorResponse(_, 404, _, _) =>
-        throw new MatchNotFoundException
+  val setHeaders: RequestHeader => Seq[(String, String)] =
+    req =>
+      req.headers
+        .get("CorrelationId")
+        .map(id => Seq("CorrelationId" -> id))
+        .getOrElse(Seq.empty)
+
+  def resolve(matchId: UUID)(implicit hc: HeaderCarrier, request: RequestHeader): Future[MatchedCitizen] =
+    http
+      .get(url"$serviceUrl/match-record/$matchId")
+      .transform(_.addHttpHeaders(setHeaders(request)*))
+      .execute[MatchedCitizen] recover { case UpstreamErrorResponse(_, 404, _, _) =>
+      throw new MatchNotFoundException
     }
 
 }

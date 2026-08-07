@@ -21,6 +21,8 @@ import org.mockito.ArgumentMatchers.{any, eq as eqTo, refEq}
 import org.mockito.Mockito
 import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.{Application, Environment, Mode}
 import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Result}
 import play.api.test.FakeRequest
@@ -30,6 +32,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, Enrolment, Enrolments, Insufficient
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.audit.AuditHelper
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.config.AppConfig
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.RootController
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.{MatchNotFoundException, MatchedCitizen}
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.services.{ScopesHelper, ScopesService, TaxCreditsService}
@@ -53,6 +56,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
 
     implicit val ec: ExecutionContext =
       fakeApplication().injector.instanceOf[ExecutionContext]
+
     lazy val scopeService: ScopesService = new ScopesService(mockScopesConfig)
     lazy val scopesHelper: ScopesHelper = new ScopesHelper(scopeService)
 
@@ -67,6 +71,13 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
     )
       .thenReturn(Future.successful(Enrolments(Set(Enrolment("test-scope")))))
 
+  }
+  trait LocalFixture extends Fixture {
+    val appLocal: Application = new GuiceApplicationBuilder()
+      .configure("localEnv" -> true)
+      .build()
+    lazy val appConfig: AppConfig = appLocal.injector.instanceOf[AppConfig]
+    implicit val env: Environment = Environment.simple(mode = Mode.Dev)
     val rootController =
       new RootController(
         mockAuthConnector,
@@ -75,12 +86,25 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
         scopesHelper,
         auditHelper,
         taxCreditsService
-      )
-
+      )(using ec, appConfig, env)
   }
 
-  "Root" should {
-    "return a 404 (not found) when a match id does not match tdata" in new Fixture {
+  trait NonLocalFixture extends Fixture {
+    lazy val appConfig: AppConfig = fakeApplication().injector.instanceOf[AppConfig]
+    implicit val env: Environment = Environment.simple(mode = Mode.Prod)
+    val rootController =
+      new RootController(
+        mockAuthConnector,
+        cc,
+        scopeService,
+        scopesHelper,
+        auditHelper,
+        taxCreditsService
+      )(using ec, appConfig, env)
+  }
+
+  "Root Controller in NonLocal env" should {
+    "return a 404 (not found) when a match id does not match tdata" in new NonLocalFixture {
 
       Mockito.reset(rootController.auditHelper)
 
@@ -99,7 +123,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
       verify(rootController.auditHelper, times(1)).auditApiFailure(any(), any(), any(), any(), any())(using any())
     }
 
-    "return a 200 (ok) when a match id matches tdata" in new Fixture {
+    "return a 200 (ok) when a match id matches tdata" in new NonLocalFixture {
 
       when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier], any[RequestHeader]))
         .thenReturn(Future.successful(MatchedCitizen(testMatchId, testNino)))
@@ -125,7 +149,7 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
       )
     }
 
-    "fail with status 401 when the bearer token does not have enrolment test-scope" in new Fixture {
+    "fail with status 401 when the bearer token does not have enrolment test-scope" in new NonLocalFixture {
 
       when(mockAuthConnector.authorise(any(), any())(using any(), any()))
         .thenReturn(Future.failed(InsufficientEnrolments()))
@@ -135,5 +159,51 @@ class RootControllerSpec extends SpecBase with MockitoSugar {
       status(result) shouldBe UNAUTHORIZED
       verifyNoInteractions(taxCreditsService)
     }
+  }
+
+  "Root Controller in Local env" should {
+    "return a 200 (ok) when a match id matches tdata" in new LocalFixture {
+
+      when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier], any[RequestHeader]))
+        .thenReturn(Future.successful(MatchedCitizen(testMatchId, testNino)))
+
+      val eventualResult: Future[Result] =
+        rootController.root(testMatchId)(FakeRequest().withHeaders(correlationIdHeader))
+
+      status(eventualResult) shouldBe OK
+      contentAsJson(eventualResult) shouldBe Json.obj(
+        "_links" -> Json.obj(
+          "child-tax-credit" -> Json.obj(
+            "href"  -> s"/individuals/benefits-and-credits/child-tax-credit?matchId=$testMatchId{&fromDate,toDate}",
+            "title" -> "Get Child Tax Credit details"
+          ),
+          "working-tax-credit" -> Json.obj(
+            "href"  -> s"/individuals/benefits-and-credits/working-tax-credit?matchId=$testMatchId{&fromDate,toDate}",
+            "title" -> "Get Working Tax Credit details"
+          ),
+          "self" -> Json.obj(
+            "href" -> s"/individuals/benefits-and-credits/?matchId=$testMatchId"
+          )
+        )
+      )
+    }
+  }
+  "return a 404 (not found) when a match id does not match tdata" in new LocalFixture {
+
+    Mockito.reset(rootController.auditHelper)
+
+    when(taxCreditsService.resolve(eqTo(testMatchId))(using any[HeaderCarrier], any[RequestHeader]))
+      .thenReturn(Future.failed(new MatchNotFoundException))
+
+    val eventualResult: Future[Result] =
+      rootController.root(testMatchId)(FakeRequest().withHeaders(correlationIdHeader))
+
+    status(eventualResult) shouldBe NOT_FOUND
+    contentAsJson(eventualResult) shouldBe Json.obj(
+      "code"    -> "NOT_FOUND",
+      "message" -> "The resource can not be found"
+    )
+
+    verify(rootController.auditHelper, times(1)).auditApiFailure(any(), any(), any(), any(), any())(using any())
   }
 }

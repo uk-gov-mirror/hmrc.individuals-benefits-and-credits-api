@@ -17,6 +17,11 @@ Please ensure you reference the OGD Data Item matrix to ensure the right data it
 Unit, integration and component tests can be run with the following:
 
     sbt test it:test component:test
+
+### Running locally for performance tests
+
+     sbt run -Dconfig.resource=application.local.conf
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html").

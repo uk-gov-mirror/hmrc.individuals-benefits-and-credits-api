@@ -17,18 +17,21 @@
 package unit.uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers
 
 import org.apache.pekko.stream.Materializer
-import org.mockito.ArgumentMatchers.{any, eq => eqTo, refEq}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo, refEq}
+import play.api.{Application, Environment, Mode}
 import org.mockito.Mockito
 import org.mockito.Mockito.{times, verify, verifyNoInteractions, when}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContentAsEmpty, Result}
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.{AuthConnector, Enrolment, Enrolments, InsufficientEnrolments}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.audit.AuditHelper
+import uk.gov.hmrc.individualsbenefitsandcreditsapi.config.AppConfig
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.controllers.v1.WorkingTaxCreditController
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.domains.MatchNotFoundException
 import uk.gov.hmrc.individualsbenefitsandcreditsapi.services.{ScopesService, TaxCreditsService}
@@ -46,8 +49,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
   val correlationIdHeader: (String, String) = "CorrelationId" -> sampleCorrelationId
 
   implicit lazy val materializer: Materializer = fakeApplication().materializer
-  private val testMatchId =
-    UUID.fromString("be2dbba5-f650-47cf-9753-91cdaeb16ebe")
+  private val testMatchId: UUID = UUID.fromString("be2dbba5-f650-47cf-9753-91cdaeb16ebe")
   private val fromDate = LocalDate.parse("2017-03-02").atStartOfDay()
   private val toDate = LocalDate.parse("2017-05-31").atStartOfDay()
   private val testInterval = Interval(fromDate, toDate)
@@ -56,20 +58,24 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
 
     implicit val executionContext: ExecutionContext =
       fakeApplication().injector.instanceOf[ExecutionContext]
-
+    implicit val hc: HeaderCarrier = HeaderCarrier()
     val scopeService: ScopesService = mock[ScopesService]
     val liveTaxCreditsService: TaxCreditsService = mock[TaxCreditsService]
     val mockAuthConnector: AuthConnector = mock[AuthConnector]
     val auditHelper: AuditHelper = mock[AuditHelper]
-
     when(
       mockAuthConnector.authorise(eqTo(Enrolment("test-scope")), refEq(Retrievals.allEnrolments))(using any(), any())
     )
       .thenReturn(Future.successful(Enrolments(Set(Enrolment("test-scope")))))
-
-    val scopes: Iterable[String] =
-      Iterable("test-scope")
-
+    val scopes: Iterable[String] = Iterable("test-scope")
+    when(scopeService.getEndPointScopes(any())).thenReturn(scopes)
+  }
+  trait LocalFixture extends Fixture {
+    val appLocal: Application = GuiceApplicationBuilder()
+      .configure("localEnv" -> true)
+      .build()
+    lazy val appConfig: AppConfig = appLocal.injector.instanceOf[AppConfig]
+    implicit val env: Environment = Environment.simple(mode = Mode.Dev)
     val workingTaxCreditsController =
       new WorkingTaxCreditController(
         mockAuthConnector,
@@ -77,18 +83,81 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
         scopeService,
         auditHelper,
         liveTaxCreditsService
-      )
+      )(using executionContext, appConfig, env)
+  }
 
-    when(scopeService.getEndPointScopes(any())).thenReturn(scopes)
-
-    implicit val hc: HeaderCarrier = HeaderCarrier()
-
+  trait NonLocalFixture extends Fixture {
+    val appLocal: Application = GuiceApplicationBuilder()
+      .configure("localEnv" -> true)
+      .build()
+    lazy val appConfig: AppConfig = appLocal.injector.instanceOf[AppConfig]
+    implicit val env: Environment = Environment.simple(mode = Mode.Prod)
+    val workingTaxCreditsController =
+      new WorkingTaxCreditController(
+        mockAuthConnector,
+        cc,
+        scopeService,
+        auditHelper,
+        liveTaxCreditsService
+      )(using executionContext, appConfig, env)
   }
 
   "working tax credits controller" when {
     "the live controller" should {
-      "the working tax credit function" should {
-        "Return Applications when successful" in new Fixture {
+      "the working tax credit function - with local conf" should {
+        "Return Applications when successful" in new LocalFixture {
+
+          Mockito.reset(workingTaxCreditsController.auditHelper)
+
+          val fakeRequest: FakeRequest[AnyContentAsEmpty.type] =
+            FakeRequest("GET", s"/working-tax-credits/")
+              .withHeaders(correlationIdHeader)
+
+          when(
+            liveTaxCreditsService
+              .getWorkingTaxCredits(eqTo(testMatchId), eqTo(testInterval), eqTo(Seq("test-scope")))(using
+                any(),
+                any(),
+                any()
+              )
+          )
+            .thenReturn(
+              Future.successful(Seq(createValidWtcApplication(), createValidWtcApplication()))
+            )
+
+          val result: Future[Result] =
+            workingTaxCreditsController
+              .workingTaxCredit(testMatchId, testInterval)(
+                fakeRequest
+              )
+          status(result) shouldBe OK
+
+          verify(workingTaxCreditsController.auditHelper, times(1))
+            .workingTaxCreditAuditApiResponse(any(), any(), any(), any(), any(), any())(using any())
+
+        }
+
+        "return error when no scopes" in new LocalFixture {
+          when(scopeService.getEndPointScopes(any())).thenReturn(List.empty)
+
+          val fakeRequest: FakeRequest[AnyContentAsEmpty.type] =
+            FakeRequest("GET", s"/working-tax-credits/")
+              .withHeaders(correlationIdHeader)
+
+          val result: Exception =
+            intercept[Exception] {
+              await(
+                workingTaxCreditsController
+                  .workingTaxCredit(testMatchId, testInterval)(fakeRequest)
+              )
+            }
+          assert(result.getMessage == "No scopes defined")
+        }
+
+      }
+
+      "the working tax credit function with Non-local conf" should {
+        "Return Applications when successful" in new NonLocalFixture {
 
           Mockito.reset(workingTaxCreditsController.auditHelper)
 
@@ -121,7 +190,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
             .auditAuthScopes(any(), any(), any())(using any())
         }
 
-        "return 404 (not found) for an invalid matchId" in new Fixture {
+        "return 404 (not found) for an invalid matchId" in new NonLocalFixture {
 
           Mockito.reset(workingTaxCreditsController.auditHelper)
 
@@ -155,7 +224,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
             .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
-        "return 401 when the bearer token does not have enrolment test-scope" in new Fixture {
+        "return 401 when the bearer token does not have enrolment test-scope" in new NonLocalFixture {
 
           when(mockAuthConnector.authorise(any(), any())(using any(), any()))
             .thenReturn(Future.failed(InsufficientEnrolments()))
@@ -171,7 +240,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
           verifyNoInteractions(liveTaxCreditsService)
         }
 
-        "return error when no scopes" in new Fixture {
+        "return error when no scopes" in new NonLocalFixture {
           when(scopeService.getEndPointScopes(any())).thenReturn(List.empty)
 
           val fakeRequest: FakeRequest[AnyContentAsEmpty.type] =
@@ -187,7 +256,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
             }
           assert(result.getMessage == "No scopes defined")
         }
-        "throws an exception when missing CorrelationId Header" in new Fixture {
+        "throws an exception when missing CorrelationId Header" in new NonLocalFixture {
 
           Mockito.reset(workingTaxCreditsController.auditHelper)
 
@@ -221,7 +290,7 @@ class WorkingTaxCreditControllerSpec extends SpecBase with MockitoSugar with Dom
             .auditApiFailure(any(), any(), any(), any(), any())(using any())
         }
 
-        "throws an exception when CorrelationId Header is malformed" in new Fixture {
+        "throws an exception when CorrelationId Header is malformed" in new NonLocalFixture {
 
           Mockito.reset(workingTaxCreditsController.auditHelper)
 
